@@ -1,0 +1,754 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 900px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 900px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="一体化政务服务平台">一体化政务服务平台</option>
+                                
+                                    <option value="政务服务信息系统">政务服务信息系统</option>
+                                
+                                    <option value="云计算中心">云计算中心</option>
+                                
+                                    <option value="数字基础设施">数字基础设施</option>
+                                
+                                    <option value="算力基础设施">算力基础设施</option>
+                                
+                                    <option value="互联网平台经营者">互联网平台经营者</option>
+                                
+                                    <option value="人民政府">人民政府</option>
+                                
+                                    <option value="县级以上人民政府">县级以上人民政府</option>
+                                
+                                    <option value="交通运行监测系统">交通运行监测系统</option>
+                                
+                                    <option value="数字技术">数字技术</option>
+                                
+                                    <option value="智慧交通">智慧交通</option>
+                                
+                                    <option value="产业">产业</option>
+                                
+                                    <option value="政府">政府</option>
+                                
+                                    <option value="京津冀">京津冀</option>
+                                
+                                    <option value="京津冀区域">京津冀区域</option>
+                                
+                                    <option value="京津冀政务服务">京津冀政务服务</option>
+                                
+                                    <option value="优质资源">优质资源</option>
+                                
+                                    <option value="信息基础设施">信息基础设施</option>
+                                
+                                    <option value="公共数据信息系统">公共数据信息系统</option>
+                                
+                                    <option value="公共服务">公共服务</option>
+                                
+                                    <option value="协同创新共同体">协同创新共同体</option>
+                                
+                                    <option value="协同发展">协同发展</option>
+                                
+                                    <option value="数字经济产业链">数字经济产业链</option>
+                                
+                                    <option value="数字经济创新发展领军城市">数字经济创新发展领军城市</option>
+                                
+                                    <option value="数据共享交换">数据共享交换</option>
+                                
+                                    <option value="数据技术规范">数据技术规范</option>
+                                
+                                    <option value="河北雄安新区">河北雄安新区</option>
+                                
+                                    <option value="现代物流体系">现代物流体系</option>
+                                
+                                    <option value="生态环境联防联治">生态环境联防联治</option>
+                                
+                                    <option value="省人民政府">省人民政府</option>
+                                
+                                    <option value="京津冀协同发展战略">京津冀协同发展战略</option>
+                                
+                                    <option value="北京市、天津市人民政府">北京市、天津市人民政府</option>
+                                
+                                    <option value="数字经济发展专项规划">数字经济发展专项规划</option>
+                                
+                                    <option value="人工智能">人工智能</option>
+                                
+                                    <option value="关键核心技术">关键核心技术</option>
+                                
+                                    <option value="平台经济">平台经济</option>
+                                
+                                    <option value="数字产业">数字产业</option>
+                                
+                                    <option value="教育部门">教育部门</option>
+                                
+                                    <option value="数字经济企业">数字经济企业</option>
+                                
+                                    <option value="科技型中小企业">科技型中小企业</option>
+                                
+                                    <option value="第三方机构">第三方机构</option>
+                                
+                                    <option value="网信部门">网信部门</option>
+                                
+                                    <option value="行业协会">行业协会</option>
+                                
+                                    <option value="财政性资金">财政性资金</option>
+                                
+                                    <option value="金融机构">金融机构</option>
+                                
+                                    <option value="高层次人才">高层次人才</option>
+                                
+                                    <option value="高等院校">高等院校</option>
+                                
+                                    <option value="企业">企业</option>
+                                
+                                    <option value="工业互联网平台">工业互联网平台</option>
+                                
+                                    <option value="体育场馆">体育场馆</option>
+                                
+                                    <option value="智慧体育">智慧体育</option>
+                                
+                                    <option value="信息技术">信息技术</option>
+                                
+                                    <option value="绿色制造">绿色制造</option>
+                                
+                                    <option value="信用数据">信用数据</option>
+                                
+                                    <option value="政务服务数据">政务服务数据</option>
+                                
+                                    <option value="全生命周期管理">全生命周期管理</option>
+                                
+                                    <option value="公共数据">公共数据</option>
+                                
+                                    <option value="数据资源">数据资源</option>
+                                
+                                    <option value="公共卫生信息">公共卫生信息</option>
+                                
+                                    <option value="智慧医疗">智慧医疗</option>
+                                
+                                    <option value="公共数据共享">公共数据共享</option>
+                                
+                                    <option value="公共数据共享平台">公共数据共享平台</option>
+                                
+                                    <option value="公共数据开放">公共数据开放</option>
+                                
+                                    <option value="公共数据开放平台">公共数据开放平台</option>
+                                
+                                    <option value="公共管理服务机构">公共管理服务机构</option>
+                                
+                                    <option value="合法、正当方式">合法、正当方式</option>
+                                
+                                    <option value="数据产品和服务">数据产品和服务</option>
+                                
+                                    <option value="数据安全">数据安全</option>
+                                
+                                    <option value="数据安全管理制度">数据安全管理制度</option>
+                                
+                                    <option value="数据收集">数据收集</option>
+                                
+                                    <option value="目录管理">目录管理</option>
+                                
+                                    <option value="财产权益">财产权益</option>
+                                
+                                    <option value="城乡基层社会治理">城乡基层社会治理</option>
+                                
+                                    <option value="共享经济">共享经济</option>
+                                
+                                    <option value="创新平台">创新平台</option>
+                                
+                                    <option value="县(市)级以上人民政府">县(市)级以上人民政府</option>
+                                
+                                    <option value="新一代信息技术产业">新一代信息技术产业</option>
+                                
+                                    <option value="智能经济">智能经济</option>
+                                
+                                    <option value="物联网">物联网</option>
+                                
+                                    <option value="电子信息制造业">电子信息制造业</option>
+                                
+                                    <option value="软件和信息服务业">软件和信息服务业</option>
+                                
+                                    <option value="农村地区数字基础设施">农村地区数字基础设施</option>
+                                
+                                    <option value="城乡数字设施一体化">城乡数字设施一体化</option>
+                                
+                                    <option value="数字经济发展工作">数字经济发展工作</option>
+                                
+                                    <option value="县级以上人民政府统计主管部门">县级以上人民政府统计主管部门</option>
+                                
+                                    <option value="数字经济统计监测机制">数字经济统计监测机制</option>
+                                
+                                    <option value="国土空间规划">国土空间规划</option>
+                                
+                                    <option value="城乡基础设施">城乡基础设施</option>
+                                
+                                    <option value="大数据">大数据</option>
+                                
+                                    <option value="智慧农业">智慧农业</option>
+                                
+                                    <option value="工业互联网基础设施">工业互联网基础设施</option>
+                                
+                                    <option value="工业互联网标识解析体系">工业互联网标识解析体系</option>
+                                
+                                    <option value="工业企业">工业企业</option>
+                                
+                                    <option value="电子商务">电子商务</option>
+                                
+                                    <option value="教育资源">教育资源</option>
+                                
+                                    <option value="智慧教育">智慧教育</option>
+                                
+                                    <option value="新一代固定和移动通信网络">新一代固定和移动通信网络</option>
+                                
+                                    <option value="新型数据中心">新型数据中心</option>
+                                
+                                    <option value="新技术基础设施">新技术基础设施</option>
+                                
+                                    <option value="通信网络">通信网络</option>
+                                
+                                    <option value="通信网络基础设施">通信网络基础设施</option>
+                                
+                                    <option value="应急救援">应急救援</option>
+                                
+                                    <option value="数字金融">数字金融</option>
+                                
+                                    <option value="文化和旅游业">文化和旅游业</option>
+                                
+                                    <option value="智慧物流体系">智慧物流体系</option>
+                                
+                                    <option value="能源">能源</option>
+                                
+                                    <option value="金融领域">金融领域</option>
+                                
+                                    <option value="数字政府建设">数字政府建设</option>
+                                
+                                    <option value="政务服务">政务服务</option>
+                                
+                                    <option value="数字服务">数字服务</option>
+                                
+                                    <option value="传统服务">传统服务</option>
+                                
+                                    <option value="数字经济">数字经济</option>
+                                
+                                    <option value="新经济形态">新经济形态</option>
+                                
+                                    <option value="省人民政府发展改革部门">省人民政府发展改革部门</option>
+                                
+                                    <option value="设区的市、县级人民政府">设区的市、县级人民政府</option>
+                                
+                                    <option value="新型智慧城市">新型智慧城市</option>
+                                
+                                    <option value="城市基础设施">城市基础设施</option>
+                                
+                                    <option value="监管数据中心">监管数据中心</option>
+                                
+                                    <option value="行政执法部门">行政执法部门</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"group": 1, "id": "\u4e00\u4f53\u5316\u653f\u52a1\u670d\u52a1\u5e73\u53f0", "label": "\u4e00\u4f53\u5316\u653f\u52a1\u670d\u52a1\u5e73\u53f0", "shape": "dot", "size": 1}, {"group": 1, "id": "\u653f\u52a1\u670d\u52a1\u4fe1\u606f\u7cfb\u7edf", "label": "\u653f\u52a1\u670d\u52a1\u4fe1\u606f\u7cfb\u7edf", "shape": "dot", "size": 1}, {"group": 2, "id": "\u4e91\u8ba1\u7b97\u4e2d\u5fc3", "label": "\u4e91\u8ba1\u7b97\u4e2d\u5fc3", "shape": "dot", "size": 2}, {"group": 2, "id": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "label": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 14}, {"group": 2, "id": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "label": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 14}, {"group": 3, "id": "\u4e92\u8054\u7f51\u5e73\u53f0\u7ecf\u8425\u8005", "label": "\u4e92\u8054\u7f51\u5e73\u53f0\u7ecf\u8425\u8005", "shape": "dot", "size": 2}, {"group": 3, "id": "\u4eba\u6c11\u653f\u5e9c", "label": "\u4eba\u6c11\u653f\u5e9c", "shape": "dot", "size": 12}, {"group": 3, "id": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "label": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "shape": "dot", "size": 14}, {"group": 4, "id": "\u4ea4\u901a\u8fd0\u884c\u76d1\u6d4b\u7cfb\u7edf", "label": "\u4ea4\u901a\u8fd0\u884c\u76d1\u6d4b\u7cfb\u7edf", "shape": "dot", "size": 2}, {"group": 4, "id": "\u6570\u5b57\u6280\u672f", "label": "\u6570\u5b57\u6280\u672f", "shape": "dot", "size": 25}, {"group": 4, "id": "\u667a\u6167\u4ea4\u901a", "label": "\u667a\u6167\u4ea4\u901a", "shape": "dot", "size": 2}, {"group": 4, "id": "\u4ea7\u4e1a", "label": "\u4ea7\u4e1a", "shape": "dot", "size": 2}, {"group": 2, "id": "\u653f\u5e9c", "label": "\u653f\u5e9c", "shape": "dot", "size": 16}, {"group": 5, "id": "\u4eac\u6d25\u5180", "label": "\u4eac\u6d25\u5180", "shape": "dot", "size": 16}, {"group": 5, "id": "\u4eac\u6d25\u5180\u533a\u57df", "label": "\u4eac\u6d25\u5180\u533a\u57df", "shape": "dot", "size": 2}, {"group": 5, "id": "\u4eac\u6d25\u5180\u653f\u52a1\u670d\u52a1", "label": "\u4eac\u6d25\u5180\u653f\u52a1\u670d\u52a1", "shape": "dot", "size": 2}, {"group": 5, "id": "\u4f18\u8d28\u8d44\u6e90", "label": "\u4f18\u8d28\u8d44\u6e90", "shape": "dot", "size": 2}, {"group": 5, "id": "\u4fe1\u606f\u57fa\u7840\u8bbe\u65bd", "label": "\u4fe1\u606f\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 2}, {"group": 5, "id": "\u516c\u5171\u6570\u636e\u4fe1\u606f\u7cfb\u7edf", "label": "\u516c\u5171\u6570\u636e\u4fe1\u606f\u7cfb\u7edf", "shape": "dot", "size": 2}, {"group": 5, "id": "\u516c\u5171\u670d\u52a1", "label": "\u516c\u5171\u670d\u52a1", "shape": "dot", "size": 2}, {"group": 5, "id": "\u534f\u540c\u521b\u65b0\u5171\u540c\u4f53", "label": "\u534f\u540c\u521b\u65b0\u5171\u540c\u4f53", "shape": "dot", "size": 1}, {"group": 5, "id": "\u534f\u540c\u53d1\u5c55", "label": "\u534f\u540c\u53d1\u5c55", "shape": "dot", "size": 1}, {"group": 5, "id": "\u6570\u5b57\u7ecf\u6d4e\u4ea7\u4e1a\u94fe", "label": "\u6570\u5b57\u7ecf\u6d4e\u4ea7\u4e1a\u94fe", "shape": "dot", "size": 2}, {"group": 5, "id": "\u6570\u5b57\u7ecf\u6d4e\u521b\u65b0\u53d1\u5c55\u9886\u519b\u57ce\u5e02", "label": "\u6570\u5b57\u7ecf\u6d4e\u521b\u65b0\u53d1\u5c55\u9886\u519b\u57ce\u5e02", "shape": "dot", "size": 2}, {"group": 5, "id": "\u6570\u636e\u5171\u4eab\u4ea4\u6362", "label": "\u6570\u636e\u5171\u4eab\u4ea4\u6362", "shape": "dot", "size": 2}, {"group": 5, "id": "\u6570\u636e\u6280\u672f\u89c4\u8303", "label": "\u6570\u636e\u6280\u672f\u89c4\u8303", "shape": "dot", "size": 2}, {"group": 5, "id": "\u6cb3\u5317\u96c4\u5b89\u65b0\u533a", "label": "\u6cb3\u5317\u96c4\u5b89\u65b0\u533a", "shape": "dot", "size": 2}, {"group": 5, "id": "\u73b0\u4ee3\u7269\u6d41\u4f53\u7cfb", "label": "\u73b0\u4ee3\u7269\u6d41\u4f53\u7cfb", "shape": "dot", "size": 1}, {"group": 5, "id": "\u751f\u6001\u73af\u5883\u8054\u9632\u8054\u6cbb", "label": "\u751f\u6001\u73af\u5883\u8054\u9632\u8054\u6cbb", "shape": "dot", "size": 1}, {"group": 2, "id": "\u7701\u4eba\u6c11\u653f\u5e9c", "label": "\u7701\u4eba\u6c11\u653f\u5e9c", "shape": "dot", "size": 7}, {"group": 3, "id": "\u4eac\u6d25\u5180\u534f\u540c\u53d1\u5c55\u6218\u7565", "label": "\u4eac\u6d25\u5180\u534f\u540c\u53d1\u5c55\u6218\u7565", "shape": "dot", "size": 2}, {"group": 3, "id": "\u5317\u4eac\u5e02\u3001\u5929\u6d25\u5e02\u4eba\u6c11\u653f\u5e9c", "label": "\u5317\u4eac\u5e02\u3001\u5929\u6d25\u5e02\u4eba\u6c11\u653f\u5e9c", "shape": "dot", "size": 2}, {"group": 3, "id": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "label": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "shape": "dot", "size": 10}, {"group": 2, "id": "\u4eba\u5de5\u667a\u80fd", "label": "\u4eba\u5de5\u667a\u80fd", "shape": "dot", "size": 4}, {"group": 2, "id": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "label": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "shape": "dot", "size": 14}, {"group": 2, "id": "\u5e73\u53f0\u7ecf\u6d4e", "label": "\u5e73\u53f0\u7ecf\u6d4e", "shape": "dot", "size": 14}, {"group": 2, "id": "\u6570\u5b57\u4ea7\u4e1a", "label": "\u6570\u5b57\u4ea7\u4e1a", "shape": "dot", "size": 14}, {"group": 3, "id": "\u6559\u80b2\u90e8\u95e8", "label": "\u6559\u80b2\u90e8\u95e8", "shape": "dot", "size": 2}, {"group": 3, "id": "\u6570\u5b57\u7ecf\u6d4e\u4f01\u4e1a", "label": "\u6570\u5b57\u7ecf\u6d4e\u4f01\u4e1a", "shape": "dot", "size": 2}, {"group": 3, "id": "\u79d1\u6280\u578b\u4e2d\u5c0f\u4f01\u4e1a", "label": "\u79d1\u6280\u578b\u4e2d\u5c0f\u4f01\u4e1a", "shape": "dot", "size": 2}, {"group": 3, "id": "\u7b2c\u4e09\u65b9\u673a\u6784", "label": "\u7b2c\u4e09\u65b9\u673a\u6784", "shape": "dot", "size": 2}, {"group": 3, "id": "\u7f51\u4fe1\u90e8\u95e8", "label": "\u7f51\u4fe1\u90e8\u95e8", "shape": "dot", "size": 2}, {"group": 3, "id": "\u884c\u4e1a\u534f\u4f1a", "label": "\u884c\u4e1a\u534f\u4f1a", "shape": "dot", "size": 2}, {"group": 3, "id": "\u8d22\u653f\u6027\u8d44\u91d1", "label": "\u8d22\u653f\u6027\u8d44\u91d1", "shape": "dot", "size": 2}, {"group": 3, "id": "\u91d1\u878d\u673a\u6784", "label": "\u91d1\u878d\u673a\u6784", "shape": "dot", "size": 2}, {"group": 3, "id": "\u9ad8\u5c42\u6b21\u4eba\u624d", "label": "\u9ad8\u5c42\u6b21\u4eba\u624d", "shape": "dot", "size": 2}, {"group": 3, "id": "\u9ad8\u7b49\u9662\u6821", "label": "\u9ad8\u7b49\u9662\u6821", "shape": "dot", "size": 2}, {"group": 2, "id": "\u4f01\u4e1a", "label": "\u4f01\u4e1a", "shape": "dot", "size": 6}, {"group": 4, "id": "\u5de5\u4e1a\u4e92\u8054\u7f51\u5e73\u53f0", "label": "\u5de5\u4e1a\u4e92\u8054\u7f51\u5e73\u53f0", "shape": "dot", "size": 2}, {"group": 4, "id": "\u4f53\u80b2\u573a\u9986", "label": "\u4f53\u80b2\u573a\u9986", "shape": "dot", "size": 2}, {"group": 4, "id": "\u667a\u6167\u4f53\u80b2", "label": "\u667a\u6167\u4f53\u80b2", "shape": "dot", "size": 2}, {"group": 4, "id": "\u4fe1\u606f\u6280\u672f", "label": "\u4fe1\u606f\u6280\u672f", "shape": "dot", "size": 2}, {"group": 4, "id": "\u7eff\u8272\u5236\u9020", "label": "\u7eff\u8272\u5236\u9020", "shape": "dot", "size": 2}, {"group": 7, "id": "\u4fe1\u7528\u6570\u636e", "label": "\u4fe1\u7528\u6570\u636e", "shape": "dot", "size": 1}, {"group": 7, "id": "\u653f\u52a1\u670d\u52a1\u6570\u636e", "label": "\u653f\u52a1\u670d\u52a1\u6570\u636e", "shape": "dot", "size": 1}, {"group": 4, "id": "\u5168\u751f\u547d\u5468\u671f\u7ba1\u7406", "label": "\u5168\u751f\u547d\u5468\u671f\u7ba1\u7406", "shape": "dot", "size": 2}, {"group": 4, "id": "\u516c\u5171\u6570\u636e", "label": "\u516c\u5171\u6570\u636e", "shape": "dot", "size": 15}, {"group": 4, "id": "\u6570\u636e\u8d44\u6e90", "label": "\u6570\u636e\u8d44\u6e90", "shape": "dot", "size": 4}, {"group": 4, "id": "\u516c\u5171\u536b\u751f\u4fe1\u606f", "label": "\u516c\u5171\u536b\u751f\u4fe1\u606f", "shape": "dot", "size": 2}, {"group": 4, "id": "\u667a\u6167\u533b\u7597", "label": "\u667a\u6167\u533b\u7597", "shape": "dot", "size": 2}, {"group": 4, "id": "\u516c\u5171\u6570\u636e\u5171\u4eab", "label": "\u516c\u5171\u6570\u636e\u5171\u4eab", "shape": "dot", "size": 2}, {"group": 4, "id": "\u516c\u5171\u6570\u636e\u5171\u4eab\u5e73\u53f0", "label": "\u516c\u5171\u6570\u636e\u5171\u4eab\u5e73\u53f0", "shape": "dot", "size": 2}, {"group": 4, "id": "\u516c\u5171\u6570\u636e\u5f00\u653e", "label": "\u516c\u5171\u6570\u636e\u5f00\u653e", "shape": "dot", "size": 2}, {"group": 4, "id": "\u516c\u5171\u6570\u636e\u5f00\u653e\u5e73\u53f0", "label": "\u516c\u5171\u6570\u636e\u5f00\u653e\u5e73\u53f0", "shape": "dot", "size": 2}, {"group": 4, "id": "\u516c\u5171\u7ba1\u7406\u670d\u52a1\u673a\u6784", "label": "\u516c\u5171\u7ba1\u7406\u670d\u52a1\u673a\u6784", "shape": "dot", "size": 1}, {"group": 4, "id": "\u5408\u6cd5\u3001\u6b63\u5f53\u65b9\u5f0f", "label": "\u5408\u6cd5\u3001\u6b63\u5f53\u65b9\u5f0f", "shape": "dot", "size": 2}, {"group": 4, "id": "\u6570\u636e\u4ea7\u54c1\u548c\u670d\u52a1", "label": "\u6570\u636e\u4ea7\u54c1\u548c\u670d\u52a1", "shape": "dot", "size": 2}, {"group": 4, "id": "\u6570\u636e\u5b89\u5168", "label": "\u6570\u636e\u5b89\u5168", "shape": "dot", "size": 2}, {"group": 4, "id": "\u6570\u636e\u5b89\u5168\u7ba1\u7406\u5236\u5ea6", "label": "\u6570\u636e\u5b89\u5168\u7ba1\u7406\u5236\u5ea6", "shape": "dot", "size": 2}, {"group": 4, "id": "\u6570\u636e\u6536\u96c6", "label": "\u6570\u636e\u6536\u96c6", "shape": "dot", "size": 2}, {"group": 4, "id": "\u76ee\u5f55\u7ba1\u7406", "label": "\u76ee\u5f55\u7ba1\u7406", "shape": "dot", "size": 1}, {"group": 4, "id": "\u8d22\u4ea7\u6743\u76ca", "label": "\u8d22\u4ea7\u6743\u76ca", "shape": "dot", "size": 2}, {"group": 4, "id": "\u57ce\u4e61\u57fa\u5c42\u793e\u4f1a\u6cbb\u7406", "label": "\u57ce\u4e61\u57fa\u5c42\u793e\u4f1a\u6cbb\u7406", "shape": "dot", "size": 1}, {"group": 2, "id": "\u5171\u4eab\u7ecf\u6d4e", "label": "\u5171\u4eab\u7ecf\u6d4e", "shape": "dot", "size": 4}, {"group": 2, "id": "\u521b\u65b0\u5e73\u53f0", "label": "\u521b\u65b0\u5e73\u53f0", "shape": "dot", "size": 4}, {"group": 2, "id": "\u53bf(\u5e02)\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "label": "\u53bf(\u5e02)\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "shape": "dot", "size": 5}, {"group": 2, "id": "\u65b0\u4e00\u4ee3\u4fe1\u606f\u6280\u672f\u4ea7\u4e1a", "label": "\u65b0\u4e00\u4ee3\u4fe1\u606f\u6280\u672f\u4ea7\u4e1a", "shape": "dot", "size": 4}, {"group": 2, "id": "\u667a\u80fd\u7ecf\u6d4e", "label": "\u667a\u80fd\u7ecf\u6d4e", "shape": "dot", "size": 4}, {"group": 2, "id": "\u7269\u8054\u7f51", "label": "\u7269\u8054\u7f51", "shape": "dot", "size": 7}, {"group": 2, "id": "\u7535\u5b50\u4fe1\u606f\u5236\u9020\u4e1a", "label": "\u7535\u5b50\u4fe1\u606f\u5236\u9020\u4e1a", "shape": "dot", "size": 4}, {"group": 2, "id": "\u8f6f\u4ef6\u548c\u4fe1\u606f\u670d\u52a1\u4e1a", "label": "\u8f6f\u4ef6\u548c\u4fe1\u606f\u670d\u52a1\u4e1a", "shape": "dot", "size": 4}, {"group": 2, "id": "\u519c\u6751\u5730\u533a\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "label": "\u519c\u6751\u5730\u533a\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 3}, {"group": 2, "id": "\u57ce\u4e61\u6570\u5b57\u8bbe\u65bd\u4e00\u4f53\u5316", "label": "\u57ce\u4e61\u6570\u5b57\u8bbe\u65bd\u4e00\u4f53\u5316", "shape": "dot", "size": 3}, {"group": 3, "id": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u5de5\u4f5c", "label": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u5de5\u4f5c", "shape": "dot", "size": 2}, {"group": 3, "id": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c\u7edf\u8ba1\u4e3b\u7ba1\u90e8\u95e8", "label": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c\u7edf\u8ba1\u4e3b\u7ba1\u90e8\u95e8", "shape": "dot", "size": 2}, {"group": 3, "id": "\u6570\u5b57\u7ecf\u6d4e\u7edf\u8ba1\u76d1\u6d4b\u673a\u5236", "label": "\u6570\u5b57\u7ecf\u6d4e\u7edf\u8ba1\u76d1\u6d4b\u673a\u5236", "shape": "dot", "size": 2}, {"group": 2, "id": "\u56fd\u571f\u7a7a\u95f4\u89c4\u5212", "label": "\u56fd\u571f\u7a7a\u95f4\u89c4\u5212", "shape": "dot", "size": 2}, {"group": 2, "id": "\u57ce\u4e61\u57fa\u7840\u8bbe\u65bd", "label": "\u57ce\u4e61\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 3}, {"group": 4, "id": "\u5927\u6570\u636e", "label": "\u5927\u6570\u636e", "shape": "dot", "size": 2}, {"group": 4, "id": "\u667a\u6167\u519c\u4e1a", "label": "\u667a\u6167\u519c\u4e1a", "shape": "dot", "size": 2}, {"group": 2, "id": "\u5de5\u4e1a\u4e92\u8054\u7f51\u57fa\u7840\u8bbe\u65bd", "label": "\u5de5\u4e1a\u4e92\u8054\u7f51\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 3}, {"group": 2, "id": "\u5de5\u4e1a\u4e92\u8054\u7f51\u6807\u8bc6\u89e3\u6790\u4f53\u7cfb", "label": "\u5de5\u4e1a\u4e92\u8054\u7f51\u6807\u8bc6\u89e3\u6790\u4f53\u7cfb", "shape": "dot", "size": 3}, {"group": 4, "id": "\u5de5\u4e1a\u4f01\u4e1a", "label": "\u5de5\u4e1a\u4f01\u4e1a", "shape": "dot", "size": 2}, {"group": 4, "id": "\u7535\u5b50\u5546\u52a1", "label": "\u7535\u5b50\u5546\u52a1", "shape": "dot", "size": 2}, {"group": 4, "id": "\u6559\u80b2\u8d44\u6e90", "label": "\u6559\u80b2\u8d44\u6e90", "shape": "dot", "size": 2}, {"group": 4, "id": "\u667a\u6167\u6559\u80b2", "label": "\u667a\u6167\u6559\u80b2", "shape": "dot", "size": 2}, {"group": 2, "id": "\u65b0\u4e00\u4ee3\u56fa\u5b9a\u548c\u79fb\u52a8\u901a\u4fe1\u7f51\u7edc", "label": "\u65b0\u4e00\u4ee3\u56fa\u5b9a\u548c\u79fb\u52a8\u901a\u4fe1\u7f51\u7edc", "shape": "dot", "size": 3}, {"group": 2, "id": "\u65b0\u578b\u6570\u636e\u4e2d\u5fc3", "label": "\u65b0\u578b\u6570\u636e\u4e2d\u5fc3", "shape": "dot", "size": 2}, {"group": 2, "id": "\u65b0\u6280\u672f\u57fa\u7840\u8bbe\u65bd", "label": "\u65b0\u6280\u672f\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 2}, {"group": 2, "id": "\u901a\u4fe1\u7f51\u7edc", "label": "\u901a\u4fe1\u7f51\u7edc", "shape": "dot", "size": 3}, {"group": 2, "id": "\u901a\u4fe1\u7f51\u7edc\u57fa\u7840\u8bbe\u65bd", "label": "\u901a\u4fe1\u7f51\u7edc\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 2}, {"group": 4, "id": "\u5e94\u6025\u6551\u63f4", "label": "\u5e94\u6025\u6551\u63f4", "shape": "dot", "size": 1}, {"group": 4, "id": "\u6570\u5b57\u91d1\u878d", "label": "\u6570\u5b57\u91d1\u878d", "shape": "dot", "size": 2}, {"group": 4, "id": "\u6587\u5316\u548c\u65c5\u6e38\u4e1a", "label": "\u6587\u5316\u548c\u65c5\u6e38\u4e1a", "shape": "dot", "size": 1}, {"group": 4, "id": "\u667a\u6167\u7269\u6d41\u4f53\u7cfb", "label": "\u667a\u6167\u7269\u6d41\u4f53\u7cfb", "shape": "dot", "size": 2}, {"group": 4, "id": "\u80fd\u6e90", "label": "\u80fd\u6e90", "shape": "dot", "size": 1}, {"group": 4, "id": "\u91d1\u878d\u9886\u57df", "label": "\u91d1\u878d\u9886\u57df", "shape": "dot", "size": 2}, {"group": 9, "id": "\u6570\u5b57\u653f\u5e9c\u5efa\u8bbe", "label": "\u6570\u5b57\u653f\u5e9c\u5efa\u8bbe", "shape": "dot", "size": 1}, {"group": 9, "id": "\u653f\u52a1\u670d\u52a1", "label": "\u653f\u52a1\u670d\u52a1", "shape": "dot", "size": 1}, {"group": 6, "id": "\u6570\u5b57\u670d\u52a1", "label": "\u6570\u5b57\u670d\u52a1", "shape": "dot", "size": 1}, {"group": 6, "id": "\u4f20\u7edf\u670d\u52a1", "label": "\u4f20\u7edf\u670d\u52a1", "shape": "dot", "size": 1}, {"group": 3, "id": "\u6570\u5b57\u7ecf\u6d4e", "label": "\u6570\u5b57\u7ecf\u6d4e", "shape": "dot", "size": 2}, {"group": 3, "id": "\u65b0\u7ecf\u6d4e\u5f62\u6001", "label": "\u65b0\u7ecf\u6d4e\u5f62\u6001", "shape": "dot", "size": 2}, {"group": 3, "id": "\u7701\u4eba\u6c11\u653f\u5e9c\u53d1\u5c55\u6539\u9769\u90e8\u95e8", "label": "\u7701\u4eba\u6c11\u653f\u5e9c\u53d1\u5c55\u6539\u9769\u90e8\u95e8", "shape": "dot", "size": 1}, {"group": 3, "id": "\u8bbe\u533a\u7684\u5e02\u3001\u53bf\u7ea7\u4eba\u6c11\u653f\u5e9c", "label": "\u8bbe\u533a\u7684\u5e02\u3001\u53bf\u7ea7\u4eba\u6c11\u653f\u5e9c", "shape": "dot", "size": 1}, {"group": 8, "id": "\u65b0\u578b\u667a\u6167\u57ce\u5e02", "label": "\u65b0\u578b\u667a\u6167\u57ce\u5e02", "shape": "dot", "size": 1}, {"group": 8, "id": "\u57ce\u5e02\u57fa\u7840\u8bbe\u65bd", "label": "\u57ce\u5e02\u57fa\u7840\u8bbe\u65bd", "shape": "dot", "size": 1}, {"group": 10, "id": "\u76d1\u7ba1\u6570\u636e\u4e2d\u5fc3", "label": "\u76d1\u7ba1\u6570\u636e\u4e2d\u5fc3", "shape": "dot", "size": 1}, {"group": 10, "id": "\u884c\u653f\u6267\u6cd5\u90e8\u95e8", "label": "\u884c\u653f\u6267\u6cd5\u90e8\u95e8", "shape": "dot", "size": 1}]);
+                  edges = new vis.DataSet([{"from": "\u4e00\u4f53\u5316\u653f\u52a1\u670d\u52a1\u5e73\u53f0", "title": "\u653f\u52a1\u670d\u52a1\u4fe1\u606f\u7cfb\u7edf\u7684\u4f9d\u6258\u5e73\u53f0", "to": "\u653f\u52a1\u670d\u52a1\u4fe1\u606f\u7cfb\u7edf", "width": 1.5}, {"from": "\u4e91\u8ba1\u7b97\u4e2d\u5fc3", "title": "contextual proximity", "to": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u4e91\u8ba1\u7b97\u4e2d\u5fc3", "title": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd\u6d89\u53ca\u4e91\u8ba1\u7b97\u4e2d\u5fc3\u5efa\u8bbe,contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 2.25}, {"from": "\u4e92\u8054\u7f51\u5e73\u53f0\u7ecf\u8425\u8005", "title": "\u4f9d\u6cd5\u5f00\u5c55\u76d1\u7ba1\uff0c\u4fc3\u8fdb\u5065\u5eb7\u53d1\u5c55,contextual proximity", "to": "\u4eba\u6c11\u653f\u5e9c", "width": 3.5}, {"from": "\u4e92\u8054\u7f51\u5e73\u53f0\u7ecf\u8425\u8005", "title": "contextual proximity", "to": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "width": 0.75}, {"from": "\u4ea4\u901a\u8fd0\u884c\u76d1\u6d4b\u7cfb\u7edf", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u4ea4\u901a\u8fd0\u884c\u76d1\u6d4b\u7cfb\u7edf", "title": "\u63d0\u9ad8\u667a\u80fd\u8fd0\u8f93\u548c\u667a\u80fd\u51fa\u884c\u80fd\u529b", "to": "\u667a\u6167\u4ea4\u901a", "width": 1.5}, {"from": "\u4ea7\u4e1a", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u4ea7\u4e1a", "title": "\u63a8\u52a8\u4ea7\u4e1a\u6570\u5b57\u5316\u8f6c\u578b", "to": "\u653f\u5e9c", "width": 1.5}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u4eac\u6d25\u5180\u533a\u57df", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u4eac\u6d25\u5180\u653f\u52a1\u670d\u52a1", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u4f18\u8d28\u8d44\u6e90", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u4fe1\u606f\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u516c\u5171\u6570\u636e\u4fe1\u606f\u7cfb\u7edf", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u516c\u5171\u670d\u52a1", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "\u63a8\u52a8\u5efa\u8bbe,contextual proximity", "to": "\u534f\u540c\u521b\u65b0\u5171\u540c\u4f53", "width": 2.5}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u534f\u540c\u53d1\u5c55", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u4ea7\u4e1a\u94fe", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u521b\u65b0\u53d1\u5c55\u9886\u519b\u57ce\u5e02", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u6570\u636e\u5171\u4eab\u4ea4\u6362", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u6570\u636e\u6280\u672f\u89c4\u8303", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u6cb3\u5317\u96c4\u5b89\u65b0\u533a", "width": 1.0}, {"from": "\u4eac\u6d25\u5180", "title": "\u6784\u5efa\u4e00\u4f53\u5316,contextual proximity", "to": "\u73b0\u4ee3\u7269\u6d41\u4f53\u7cfb", "width": 2.5}, {"from": "\u4eac\u6d25\u5180", "title": "\u5b9e\u73b0\u4e00\u4f53\u5316,contextual proximity", "to": "\u751f\u6001\u73af\u5883\u8054\u9632\u8054\u6cbb", "width": 2.5}, {"from": "\u4eac\u6d25\u5180", "title": "contextual proximity", "to": "\u7701\u4eba\u6c11\u653f\u5e9c", "width": 1.0}, {"from": "\u4eac\u6d25\u5180\u533a\u57df", "title": "\u6253\u9020\u4ea7\u4e1a\u96c6\u7fa4", "to": "\u6570\u5b57\u7ecf\u6d4e\u4ea7\u4e1a\u94fe", "width": 1.5}, {"from": "\u4eac\u6d25\u5180\u534f\u540c\u53d1\u5c55\u6218\u7565", "title": "\u52a0\u5f3a\u4e0e\u4eac\u6d25\u5180\u5728\u6570\u5b57\u7ecf\u6d4e\u9886\u57df\u7684\u534f\u540c\u53d1\u5c55", "to": "\u5317\u4eac\u5e02\u3001\u5929\u6d25\u5e02\u4eba\u6c11\u653f\u5e9c", "width": 1.5}, {"from": "\u4eac\u6d25\u5180\u534f\u540c\u53d1\u5c55\u6218\u7565", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "width": 0.5}, {"from": "\u4eac\u6d25\u5180\u653f\u52a1\u670d\u52a1", "title": "\u652f\u6491\u534f\u540c", "to": "\u6570\u636e\u5171\u4eab\u4ea4\u6362", "width": 1.5}, {"from": "\u4eba\u5de5\u667a\u80fd", "title": "\u5173\u8054\u5173\u7cfb\uff0c\u5173\u952e\u6280\u672f\u9886\u57df\u4e4b\u4e00,contextual proximity", "to": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "width": 2.0}, {"from": "\u4eba\u5de5\u667a\u80fd", "title": "contextual proximity", "to": "\u5e73\u53f0\u7ecf\u6d4e", "width": 0.5}, {"from": "\u4eba\u5de5\u667a\u80fd", "title": "contextual proximity", "to": "\u653f\u5e9c", "width": 0.5}, {"from": "\u4eba\u5de5\u667a\u80fd", "title": "contextual proximity", "to": "\u6570\u5b57\u4ea7\u4e1a", "width": 0.75}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "width": 6.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u6559\u80b2\u90e8\u95e8", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u4f01\u4e1a", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u79d1\u6280\u578b\u4e2d\u5c0f\u4f01\u4e1a", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u7b2c\u4e09\u65b9\u673a\u6784", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u7f51\u4fe1\u90e8\u95e8", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u884c\u4e1a\u534f\u4f1a", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u8d22\u653f\u6027\u8d44\u91d1", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u91d1\u878d\u673a\u6784", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u9ad8\u5c42\u6b21\u4eba\u624d", "width": 2.0}, {"from": "\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u9ad8\u7b49\u9662\u6821", "width": 2.0}, {"from": "\u4f01\u4e1a", "title": "contextual proximity", "to": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "width": 0.5}, {"from": "\u4f01\u4e1a", "title": "contextual proximity", "to": "\u5e73\u53f0\u7ecf\u6d4e", "width": 0.5}, {"from": "\u4f01\u4e1a", "title": "\u652f\u6301\u5173\u7cfb\uff0c\u653f\u5e9c\u652f\u6301\u4f01\u4e1a\u53d1\u5c55,contextual proximity", "to": "\u653f\u5e9c", "width": 2.25}, {"from": "\u4f01\u4e1a", "title": "contextual proximity", "to": "\u6570\u5b57\u4ea7\u4e1a", "width": 0.75}, {"from": "\u4f01\u4e1a", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u4f01\u4e1a", "title": "\u4fc3\u8fdb\u4f01\u4e1a\u751f\u4ea7\u548c\u7ba1\u7406\u6548\u80fd\u63d0\u5347", "to": "\u5de5\u4e1a\u4e92\u8054\u7f51\u5e73\u53f0", "width": 1.5}, {"from": "\u4f18\u8d28\u8d44\u6e90", "title": "\u63d0\u5347\u6c34\u5e73", "to": "\u516c\u5171\u670d\u52a1", "width": 1.5}, {"from": "\u4f53\u80b2\u573a\u9986", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u4f53\u80b2\u573a\u9986", "title": "\u63a8\u52a8\u6570\u5b57\u6280\u672f\u4e0e\u51b0\u96ea\u8fd0\u52a8\u878d\u5408", "to": "\u667a\u6167\u4f53\u80b2", "width": 1.5}, {"from": "\u4fe1\u606f\u57fa\u7840\u8bbe\u65bd", "title": "\u8d1f\u8d23\u534f\u540c\u5efa\u8bbe", "to": "\u7701\u4eba\u6c11\u653f\u5e9c", "width": 1.5}, {"from": "\u4fe1\u606f\u6280\u672f", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u4fe1\u606f\u6280\u672f", "title": "\u63d0\u9ad8\u7eff\u8272\u5236\u9020\u6548\u7387\u548c\u6548\u76ca", "to": "\u7eff\u8272\u5236\u9020", "width": 1.5}, {"from": "\u4fe1\u7528\u6570\u636e", "title": "\u8de8\u90e8\u95e8\u3001\u8de8\u5c42\u7ea7\u5171\u4eab", "to": "\u653f\u52a1\u670d\u52a1\u6570\u636e", "width": 1.5}, {"from": "\u5168\u751f\u547d\u5468\u671f\u7ba1\u7406", "title": "contextual proximity", "to": "\u516c\u5171\u6570\u636e", "width": 0.5}, {"from": "\u5168\u751f\u547d\u5468\u671f\u7ba1\u7406", "title": "\u6570\u636e\u8d44\u6e90\u9700\u8981\u5168\u751f\u547d\u5468\u671f\u7ba1\u7406", "to": "\u6570\u636e\u8d44\u6e90", "width": 1.5}, {"from": "\u516c\u5171\u536b\u751f\u4fe1\u606f", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u516c\u5171\u536b\u751f\u4fe1\u606f", "title": "\u63d0\u9ad8\u533b\u7597\u3001\u516c\u5171\u536b\u751f\u670d\u52a1\u80fd\u529b\u548c\u6280\u672f\u6c34\u5e73", "to": "\u667a\u6167\u533b\u7597", "width": 1.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u516c\u5171\u6570\u636e\u5171\u4eab", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u516c\u5171\u6570\u636e\u5171\u4eab\u5e73\u53f0", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u516c\u5171\u6570\u636e\u5f00\u653e", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u516c\u5171\u6570\u636e\u5f00\u653e\u5e73\u53f0", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u516c\u5171\u7ba1\u7406\u670d\u52a1\u673a\u6784", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u5408\u6cd5\u3001\u6b63\u5f53\u65b9\u5f0f", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u6570\u636e\u4ea7\u54c1\u548c\u670d\u52a1", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u6570\u636e\u5b89\u5168", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u6570\u636e\u5b89\u5168\u7ba1\u7406\u5236\u5ea6", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u6570\u636e\u6536\u96c6", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u6570\u636e\u8d44\u6e90", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u76ee\u5f55\u7ba1\u7406", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "contextual proximity", "to": "\u8d22\u4ea7\u6743\u76ca", "width": 0.5}, {"from": "\u516c\u5171\u6570\u636e", "title": "\u516c\u5171\u6570\u636e\u5728\u57fa\u5c42\u7684\u5e94\u7528", "to": "\u57ce\u4e61\u57fa\u5c42\u793e\u4f1a\u6cbb\u7406", "width": 1.5}, {"from": "\u516c\u5171\u6570\u636e\u4fe1\u606f\u7cfb\u7edf", "title": "\u5b9e\u73b0\u517c\u5bb9", "to": "\u6570\u636e\u6280\u672f\u89c4\u8303", "width": 1.5}, {"from": "\u516c\u5171\u6570\u636e\u5171\u4eab", "title": "\u516c\u5171\u6570\u636e\u5171\u4eab\u901a\u8fc7\u5171\u4eab\u5e73\u53f0\u5b9e\u73b0", "to": "\u516c\u5171\u6570\u636e\u5171\u4eab\u5e73\u53f0", "width": 1.5}, {"from": "\u516c\u5171\u6570\u636e\u5f00\u653e", "title": "\u516c\u5171\u6570\u636e\u5f00\u653e\u901a\u8fc7\u5f00\u653e\u5e73\u53f0\u5b9e\u73b0", "to": "\u516c\u5171\u6570\u636e\u5f00\u653e\u5e73\u53f0", "width": 1.5}, {"from": "\u5171\u4eab\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "width": 0.5}, {"from": "\u5171\u4eab\u7ecf\u6d4e", "title": "\u5305\u542b\u5173\u7cfb\uff0c\u5e73\u53f0\u7ecf\u6d4e\u7684\u4e00\u79cd\u5f62\u5f0f,contextual proximity", "to": "\u5e73\u53f0\u7ecf\u6d4e", "width": 2.0}, {"from": "\u5171\u4eab\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u653f\u5e9c", "width": 0.5}, {"from": "\u5171\u4eab\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u6570\u5b57\u4ea7\u4e1a", "width": 0.75}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u521b\u65b0\u5e73\u53f0", "width": 0.5}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u53bf(\u5e02)\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "width": 0.5}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u5e73\u53f0\u7ecf\u6d4e", "width": 1.0}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u653f\u5e9c", "width": 1.0}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u6570\u5b57\u4ea7\u4e1a", "width": 1.5}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u65b0\u4e00\u4ee3\u4fe1\u606f\u6280\u672f\u4ea7\u4e1a", "width": 0.5}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u667a\u80fd\u7ecf\u6d4e", "width": 0.5}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u7269\u8054\u7f51", "width": 0.5}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u7535\u5b50\u4fe1\u606f\u5236\u9020\u4e1a", "width": 0.5}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u7701\u4eba\u6c11\u653f\u5e9c", "width": 0.5}, {"from": "\u5173\u952e\u6838\u5fc3\u6280\u672f", "title": "contextual proximity", "to": "\u8f6f\u4ef6\u548c\u4fe1\u606f\u670d\u52a1\u4e1a", "width": 0.5}, {"from": "\u519c\u6751\u5730\u533a\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "\u519c\u6751\u5730\u533a\u6570\u5b57\u57fa\u7840\u8bbe\u65bd\u63a8\u8fdb\u57ce\u4e61\u8bbe\u65bd\u4e00\u4f53\u5316", "to": "\u57ce\u4e61\u6570\u5b57\u8bbe\u65bd\u4e00\u4f53\u5316", "width": 1.5}, {"from": "\u519c\u6751\u5730\u533a\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u519c\u6751\u5730\u533a\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u521b\u65b0\u5e73\u53f0", "title": "contextual proximity", "to": "\u5e73\u53f0\u7ecf\u6d4e", "width": 0.5}, {"from": "\u521b\u65b0\u5e73\u53f0", "title": "\u5efa\u8bbe\u5173\u7cfb\uff0c\u653f\u5e9c\u63a8\u52a8\u521b\u65b0\u5e73\u53f0\u5efa\u8bbe,contextual proximity", "to": "\u653f\u5e9c", "width": 2.0}, {"from": "\u521b\u65b0\u5e73\u53f0", "title": "contextual proximity", "to": "\u6570\u5b57\u4ea7\u4e1a", "width": 0.75}, {"from": "\u5317\u4eac\u5e02\u3001\u5929\u6d25\u5e02\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "width": 0.5}, {"from": "\u53bf(\u5e02)\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u5e73\u53f0\u7ecf\u6d4e", "width": 0.5}, {"from": "\u53bf(\u5e02)\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u653f\u5e9c", "width": 0.5}, {"from": "\u53bf(\u5e02)\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u6570\u5b57\u4ea7\u4e1a", "width": 0.75}, {"from": "\u53bf(\u5e02)\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "\u7ba1\u8f96\u5173\u7cfb\uff0c\u4e0a\u7ea7\u4e0e\u4e0b\u7ea7", "to": "\u7701\u4eba\u6c11\u653f\u5e9c", "width": 1.5}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u6559\u80b2\u90e8\u95e8", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u4f01\u4e1a", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "width": 0.5}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "\u8d1f\u8d23\u63a8\u52a8\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u5de5\u4f5c", "to": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u5de5\u4f5c", "width": 1.5}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u79d1\u6280\u578b\u4e2d\u5c0f\u4f01\u4e1a", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u7b2c\u4e09\u65b9\u673a\u6784", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u7f51\u4fe1\u90e8\u95e8", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u884c\u4e1a\u534f\u4f1a", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u8d22\u653f\u6027\u8d44\u91d1", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u91d1\u878d\u673a\u6784", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u9ad8\u5c42\u6b21\u4eba\u624d", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c", "title": "contextual proximity", "to": "\u9ad8\u7b49\u9662\u6821", "width": 0.75}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c\u7edf\u8ba1\u4e3b\u7ba1\u90e8\u95e8", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "width": 0.5}, {"from": "\u53bf\u7ea7\u4ee5\u4e0a\u4eba\u6c11\u653f\u5e9c\u7edf\u8ba1\u4e3b\u7ba1\u90e8\u95e8", "title": "\u8d1f\u8d23\u5efa\u7acb\u6570\u5b57\u7ecf\u6d4e\u7edf\u8ba1\u76d1\u6d4b\u673a\u5236", "to": "\u6570\u5b57\u7ecf\u6d4e\u7edf\u8ba1\u76d1\u6d4b\u673a\u5236", "width": 1.5}, {"from": "\u5408\u6cd5\u3001\u6b63\u5f53\u65b9\u5f0f", "title": "\u6570\u636e\u6536\u96c6\u9700\u5408\u6cd5\u3001\u6b63\u5f53", "to": "\u6570\u636e\u6536\u96c6", "width": 1.5}, {"from": "\u56fd\u571f\u7a7a\u95f4\u89c4\u5212", "title": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd\u5efa\u8bbe\u7eb3\u5165\u56fd\u571f\u7a7a\u95f4\u89c4\u5212,contextual proximity", "to": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "width": 2.5}, {"from": "\u56fd\u571f\u7a7a\u95f4\u89c4\u5212", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u57ce\u4e61\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u57ce\u4e61\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u57ce\u4e61\u57fa\u7840\u8bbe\u65bd", "title": "\u7269\u8054\u7f51\u5e94\u7528\u4e8e\u57ce\u4e61\u57fa\u7840\u8bbe\u65bd", "to": "\u7269\u8054\u7f51", "width": 1.5}, {"from": "\u57ce\u4e61\u6570\u5b57\u8bbe\u65bd\u4e00\u4f53\u5316", "title": "contextual proximity", "to": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u57ce\u4e61\u6570\u5b57\u8bbe\u65bd\u4e00\u4f53\u5316", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u5927\u6570\u636e", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u5927\u6570\u636e", "title": "\u63d0\u9ad8\u519c\u4e1a\u751f\u4ea7\u7cbe\u7ec6\u5316\u3001\u667a\u6167\u5316\u6c34\u5e73", "to": "\u667a\u6167\u519c\u4e1a", "width": 1.5}, {"from": "\u5de5\u4e1a\u4e92\u8054\u7f51\u57fa\u7840\u8bbe\u65bd", "title": "\u5de5\u4e1a\u4e92\u8054\u7f51\u57fa\u7840\u8bbe\u65bd\u5305\u542b\u6807\u8bc6\u89e3\u6790\u4f53\u7cfb", "to": "\u5de5\u4e1a\u4e92\u8054\u7f51\u6807\u8bc6\u89e3\u6790\u4f53\u7cfb", "width": 1.5}, {"from": "\u5de5\u4e1a\u4e92\u8054\u7f51\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u5de5\u4e1a\u4e92\u8054\u7f51\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u5de5\u4e1a\u4e92\u8054\u7f51\u5e73\u53f0", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u5de5\u4e1a\u4e92\u8054\u7f51\u6807\u8bc6\u89e3\u6790\u4f53\u7cfb", "title": "contextual proximity", "to": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u5de5\u4e1a\u4e92\u8054\u7f51\u6807\u8bc6\u89e3\u6790\u4f53\u7cfb", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u5de5\u4e1a\u4f01\u4e1a", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u5de5\u4e1a\u4f01\u4e1a", "title": "\u63d0\u9ad8\u4f9b\u5e94\u94fe\u4ea7\u4e1a\u94fe\u534f\u540c\u6c34\u5e73", "to": "\u7535\u5b50\u5546\u52a1", "width": 1.5}, {"from": "\u5e73\u53f0\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u653f\u5e9c", "width": 1.0}, {"from": "\u5e73\u53f0\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u6570\u5b57\u4ea7\u4e1a", "width": 1.5}, {"from": "\u5e73\u53f0\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u65b0\u4e00\u4ee3\u4fe1\u606f\u6280\u672f\u4ea7\u4e1a", "width": 0.5}, {"from": "\u5e73\u53f0\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u667a\u80fd\u7ecf\u6d4e", "width": 0.5}, {"from": "\u5e73\u53f0\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u7269\u8054\u7f51", "width": 0.5}, {"from": "\u5e73\u53f0\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u7535\u5b50\u4fe1\u606f\u5236\u9020\u4e1a", "width": 0.5}, {"from": "\u5e73\u53f0\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u7701\u4eba\u6c11\u653f\u5e9c", "width": 0.5}, {"from": "\u5e73\u53f0\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u8f6f\u4ef6\u548c\u4fe1\u606f\u670d\u52a1\u4e1a", "width": 0.5}, {"from": "\u653f\u5e9c", "title": "contextual proximity", "to": "\u6570\u5b57\u4ea7\u4e1a", "width": 1.5}, {"from": "\u653f\u5e9c", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u653f\u5e9c", "title": "contextual proximity", "to": "\u65b0\u4e00\u4ee3\u4fe1\u606f\u6280\u672f\u4ea7\u4e1a", "width": 0.5}, {"from": "\u653f\u5e9c", "title": "contextual proximity", "to": "\u667a\u80fd\u7ecf\u6d4e", "width": 0.5}, {"from": "\u653f\u5e9c", "title": "contextual proximity", "to": "\u7269\u8054\u7f51", "width": 0.5}, {"from": "\u653f\u5e9c", "title": "contextual proximity", "to": "\u7535\u5b50\u4fe1\u606f\u5236\u9020\u4e1a", "width": 0.5}, {"from": "\u653f\u5e9c", "title": "contextual proximity", "to": "\u7701\u4eba\u6c11\u653f\u5e9c", "width": 0.5}, {"from": "\u653f\u5e9c", "title": "contextual proximity", "to": "\u8f6f\u4ef6\u548c\u4fe1\u606f\u670d\u52a1\u4e1a", "width": 0.5}, {"from": "\u6559\u80b2\u8d44\u6e90", "title": "contextual proximity", "to": "\u6570\u5b57\u6280\u672f", "width": 0.5}, {"from": "\u6559\u80b2\u8d44\u6e90", "title": "\u5168\u9762\u63d0\u9ad8\u6559\u80b2\u6570\u5b57\u5316\u6c34\u5e73", "to": "\u667a\u6167\u6559\u80b2", "width": 1.5}, {"from": "\u6570\u5b57\u4ea7\u4e1a", "title": "contextual proximity", "to": "\u65b0\u4e00\u4ee3\u4fe1\u606f\u6280\u672f\u4ea7\u4e1a", "width": 0.75}, {"from": "\u6570\u5b57\u4ea7\u4e1a", "title": "contextual proximity", "to": "\u667a\u80fd\u7ecf\u6d4e", "width": 0.75}, {"from": "\u6570\u5b57\u4ea7\u4e1a", "title": "contextual proximity", "to": "\u7269\u8054\u7f51", "width": 0.75}, {"from": "\u6570\u5b57\u4ea7\u4e1a", "title": "contextual proximity", "to": "\u7535\u5b50\u4fe1\u606f\u5236\u9020\u4e1a", "width": 0.75}, {"from": "\u6570\u5b57\u4ea7\u4e1a", "title": "contextual proximity", "to": "\u7701\u4eba\u6c11\u653f\u5e9c", "width": 0.75}, {"from": "\u6570\u5b57\u4ea7\u4e1a", "title": "contextual proximity", "to": "\u8f6f\u4ef6\u548c\u4fe1\u606f\u670d\u52a1\u4e1a", "width": 0.75}, {"from": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u65b0\u4e00\u4ee3\u56fa\u5b9a\u548c\u79fb\u52a8\u901a\u4fe1\u7f51\u7edc", "width": 1.0}, {"from": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u65b0\u578b\u6570\u636e\u4e2d\u5fc3", "width": 1.0}, {"from": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u65b0\u6280\u672f\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u7269\u8054\u7f51", "width": 1.0}, {"from": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 3.0}, {"from": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u901a\u4fe1\u7f51\u7edc", "width": 1.0}, {"from": "\u6570\u5b57\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u901a\u4fe1\u7f51\u7edc\u57fa\u7840\u8bbe\u65bd", "width": 1.0}, {"from": "\u6570\u5b57\u6280\u672f", "title": "\u63d0\u9ad8\u5e94\u6025\u76d1\u6d4b\u9884\u8b66\u80fd\u529b", "to": "\u5e94\u6025\u6551\u63f4", "width": 1.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u6570\u5b57\u91d1\u878d", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u6570\u636e\u8d44\u6e90", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u6587\u5316\u548c\u65c5\u6e38\u4e1a", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u667a\u6167\u4ea4\u901a", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u667a\u6167\u4f53\u80b2", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u667a\u6167\u519c\u4e1a", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u667a\u6167\u533b\u7597", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u667a\u6167\u6559\u80b2", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u667a\u6167\u7269\u6d41\u4f53\u7cfb", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u7535\u5b50\u5546\u52a1", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u7eff\u8272\u5236\u9020", "width": 0.5}, {"from": "\u6570\u5b57\u6280\u672f", "title": "\u63d0\u5347\u80fd\u6e90\u751f\u4ea7\u6548\u80fd,contextual proximity", "to": "\u80fd\u6e90", "width": 2.0}, {"from": "\u6570\u5b57\u6280\u672f", "title": "contextual proximity", "to": "\u91d1\u878d\u9886\u57df", "width": 0.5}, {"from": "\u6570\u5b57\u653f\u5e9c\u5efa\u8bbe", "title": "\u6570\u5b57\u6280\u672f\u5e94\u7528\u4e8e\u653f\u52a1\u670d\u52a1", "to": "\u653f\u52a1\u670d\u52a1", "width": 1.5}, {"from": "\u6570\u5b57\u670d\u52a1", "title": "\u4f18\u5316\u4f20\u7edf\u670d\u52a1\u4e0e\u521b\u65b0\u6570\u5b57\u670d\u52a1\u5e76\u884c", "to": "\u4f20\u7edf\u670d\u52a1", "width": 1.5}, {"from": "\u6570\u5b57\u7ecf\u6d4e", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "width": 0.5}, {"from": "\u6570\u5b57\u7ecf\u6d4e", "title": "\u6570\u5b57\u7ecf\u6d4e\u662f\u65b0\u7ecf\u6d4e\u5f62\u6001\u7684\u5173\u952e\u8981\u7d20", "to": "\u65b0\u7ecf\u6d4e\u5f62\u6001", "width": 1.5}, {"from": "\u6570\u5b57\u7ecf\u6d4e\u521b\u65b0\u53d1\u5c55\u9886\u519b\u57ce\u5e02", "title": "\u53d1\u5c55\u76ee\u6807", "to": "\u6cb3\u5317\u96c4\u5b89\u65b0\u533a", "width": 1.5}, {"from": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u5de5\u4f5c", "width": 0.5}, {"from": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "title": "contextual proximity", "to": "\u6570\u5b57\u7ecf\u6d4e\u7edf\u8ba1\u76d1\u6d4b\u673a\u5236", "width": 0.5}, {"from": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "title": "contextual proximity", "to": "\u65b0\u7ecf\u6d4e\u5f62\u6001", "width": 0.5}, {"from": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "title": "\u8d1f\u8d23\u7f16\u5236\u548c\u53d1\u5e03\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212,contextual proximity", "to": "\u7701\u4eba\u6c11\u653f\u5e9c\u53d1\u5c55\u6539\u9769\u90e8\u95e8", "width": 2.0}, {"from": "\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u4e13\u9879\u89c4\u5212", "title": "\u6839\u636e\u7701\u7ea7\u89c4\u5212\u7f16\u5236\u672c\u884c\u653f\u533a\u57df\u6570\u5b57\u7ecf\u6d4e\u53d1\u5c55\u89c4\u5212,contextual proximity", "to": "\u8bbe\u533a\u7684\u5e02\u3001\u53bf\u7ea7\u4eba\u6c11\u653f\u5e9c", "width": 2.0}, {"from": "\u6570\u5b57\u91d1\u878d", "title": "\u63a8\u52a8\u91d1\u878d\u4e1a\u6570\u5b57\u5316\u53d1\u5c55", "to": "\u91d1\u878d\u9886\u57df", "width": 1.5}, {"from": "\u6570\u636e\u4ea7\u54c1\u548c\u670d\u52a1", "title": "\u6570\u636e\u4ea7\u54c1\u548c\u670d\u52a1\u6709\u8d22\u4ea7\u6743\u76ca", "to": "\u8d22\u4ea7\u6743\u76ca", "width": 1.5}, {"from": "\u6570\u636e\u5b89\u5168", "title": "\u7f51\u7edc\u8fd0\u8425\u8005\u9700\u5efa\u7acb\u6570\u636e\u5b89\u5168\u7ba1\u7406\u5236\u5ea6", "to": "\u6570\u636e\u5b89\u5168\u7ba1\u7406\u5236\u5ea6", "width": 1.5}, {"from": "\u6570\u636e\u8d44\u6e90", "title": "\u63d0\u5347\u667a\u80fd\u4ed3\u50a8\u3001\u667a\u80fd\u8d27\u8fd0\u670d\u52a1\u80fd\u529b", "to": "\u667a\u6167\u7269\u6d41\u4f53\u7cfb", "width": 1.5}, {"from": "\u65b0\u4e00\u4ee3\u56fa\u5b9a\u548c\u79fb\u52a8\u901a\u4fe1\u7f51\u7edc", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u65b0\u4e00\u4ee3\u56fa\u5b9a\u548c\u79fb\u52a8\u901a\u4fe1\u7f51\u7edc", "title": "\u901a\u4fe1\u7f51\u7edc\u5305\u62ec\u65b0\u4e00\u4ee3\u56fa\u5b9a\u548c\u79fb\u52a8\u901a\u4fe1\u7f51\u7edc", "to": "\u901a\u4fe1\u7f51\u7edc", "width": 1.5}, {"from": "\u65b0\u578b\u6570\u636e\u4e2d\u5fc3", "title": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd\u6d89\u53ca\u65b0\u578b\u6570\u636e\u4e2d\u5fc3\u5efa\u8bbe,contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 2.25}, {"from": "\u65b0\u578b\u667a\u6167\u57ce\u5e02", "title": "\u63d0\u5347\u57fa\u7840\u8bbe\u65bd\u6570\u636e\u611f\u77e5\u80fd\u529b", "to": "\u57ce\u5e02\u57fa\u7840\u8bbe\u65bd", "width": 1.5}, {"from": "\u65b0\u6280\u672f\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u7269\u8054\u7f51", "title": "contextual proximity", "to": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "width": 0.75}, {"from": "\u76d1\u7ba1\u6570\u636e\u4e2d\u5fc3", "title": "\u4e3a\u884c\u653f\u6267\u6cd5\u63d0\u4f9b\u6570\u636e\u670d\u52a1", "to": "\u884c\u653f\u6267\u6cd5\u90e8\u95e8", "width": 1.5}, {"from": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u901a\u4fe1\u7f51\u7edc", "width": 0.75}, {"from": "\u7b97\u529b\u57fa\u7840\u8bbe\u65bd", "title": "contextual proximity", "to": "\u901a\u4fe1\u7f51\u7edc\u57fa\u7840\u8bbe\u65bd", "width": 0.75}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "barnesHut": {
+            "avoidOverlap": 0,
+            "centralGravity": 5.05,
+            "damping": 0.09,
+            "gravitationalConstant": -18100,
+            "springConstant": 0.001,
+            "springLength": 380
+        },
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.015,
+            "damping": 0.4,
+            "gravitationalConstant": -31,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "repulsion": {
+            "centralGravity": 0.2,
+            "damping": 0.09,
+            "nodeDistance": 150,
+            "springConstant": 0.05,
+            "springLength": 400
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
